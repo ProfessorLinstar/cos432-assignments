@@ -268,7 +268,6 @@ public class RSAKey {
         new PRGen(fit(nonce, PRGen.KEY_SIZE_BYTES)).nextBytes(cipher);
         xor(input, cipher, 0, nonRandomSizeBytes);
 
-        // TODO: verify integrity by checking that padding is zero
         for (int i = messageSizeBytes; i < nonRandomSizeBytes; i++) {
             if (input[i] != 0)
                 return null;
@@ -304,7 +303,15 @@ public class RSAKey {
         byte[] padded = addPadding(plaintext);
         byte[] oaepEncoded = encodeOaep(padded, prgen);
         BigInteger encryptedBigInt = HW2Util.bytesToBigInteger(oaepEncoded).modPow(exponent, modulus);
-        byte[] encrypted = HW2Util.bigIntegerToBytes(encryptedBigInt, encryptedBigInt.toByteArray().length);
+        byte[] encrypted = encryptedBigInt.toByteArray();
+
+        System.out.println("\n*** encrypting ***");
+        System.out.println("oaepEncoded: " + Arrays.toString(oaepEncoded));
+        System.out.println("oaepEncodedBigInt: " + HW2Util.bytesToBigInteger(oaepEncoded));
+        System.out.println("encryptedBigInt: " + encryptedBigInt);
+        System.out.println("encrypted: " + encrypted);
+        System.out.println("*** encrypted ***\n");
+
         return encrypted;
     }
 
@@ -321,11 +328,21 @@ public class RSAKey {
             throw new NullPointerException();
 
         // IMPLEMENT THIS
+
         BigInteger decryptedBigInt = HW2Util.bytesToBigInteger(ciphertext).modPow(exponent, modulus);
+
         byte[] decrypted = HW2Util.bigIntegerToBytes(decryptedBigInt, rsaInputSizeBytes);
+
+        System.out.println("\n*** decrypting ***");
+        System.out.println("ciphertext: " + HW2Util.bytesToBigInteger(ciphertext));
+        System.out.println("exponent: " + exponent);
+        System.out.println("modulus: " + modulus);
+        System.out.println("decryptedBigInt: " + decryptedBigInt);
+        System.out.println("decrypted: " + Arrays.toString(decrypted));
+        System.out.println("*** decrypted ***\n");
+
         byte[] decodedPadded = decodeOaep(decrypted);
-        byte[] decoded = removePadding(decodedPadded);
-        return decoded;
+        return decodedPadded != null ? removePadding(decodedPadded) : null;
     }
 
     /***
@@ -344,7 +361,7 @@ public class RSAKey {
             throw new NullPointerException();
 
         // IMPLEMENT THIS
-        return null;
+        return encrypt(HashFunction.computeHash(message), prgen);
     }
 
     /***
@@ -367,7 +384,18 @@ public class RSAKey {
             throw new NullPointerException();
 
         // IMPLEMENT THIS
-        return false;
+        byte[] decrypted = decrypt(signature);
+        if (decrypted == null)
+            return false;
+        byte[] hashed = HashFunction.computeHash(message);
+        if (decrypted.length != hashed.length)
+            return false;
+        for (int i = 0; i < hashed.length; i++) {
+            if (decrypted[i] != hashed[i])
+                return false;
+        }
+
+        return true;
     }
 
     public static void main(String[] args) {
@@ -403,6 +431,36 @@ public class RSAKey {
         System.out.println("original:   " + Arrays.toString(x));
         System.out.println("single xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
         System.out.println("second xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
+
+        System.out.println("\nTesting encryption/decryption:");
+        System.out.println("rsaKP.getPrimes()[0]: " + rsaKP.getPrimes()[0]);
+        System.out.println("rsaKP.getPrimes()[1]: " + rsaKP.getPrimes()[1]);
+        System.out.println("publicKey.exponent:   " + publicKey.exponent);
+        System.out.println("privateKey.exponent:  " + privateKey.exponent);
+        System.out.println("publicKey.modulus:    " + publicKey.modulus);
+        System.out.println("privateKey.modulus:   " + privateKey.modulus);
+
+        byte[] encrypted = publicKey.encrypt(message, rand);
+        System.out.println("Encrypted: " + Arrays.toString(encrypted));
+
+        byte[] decrypted = privateKey.decrypt(encrypted);
+        System.out.println("Decrypted: " + Arrays.toString(decrypted));
+
+        System.out.println("\n*** signature testing ***");
+        byte[] signature = privateKey.sign(message, rand);
+        System.out.println("signature: " + Arrays.toString(signature));
+        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
+
+        signature[0] += 1;
+        System.out.println("modified signature: " + Arrays.toString(signature));
+        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
+
+        byte[] message2 = new byte[] { 1, 2, 3, 4, 5};
+        signature = privateKey.sign(message2, rand);
+        System.out.println("signature on message2:" + Arrays.toString(signature));
+        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
+
+
     }
 
 }
