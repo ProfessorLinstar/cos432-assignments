@@ -19,9 +19,9 @@ public class RSAKey {
     private BigInteger exponent;
     private BigInteger modulus;
 
-    private int rsaInputSizeBytes; // convert into functions
-    private int messageSizeBytes; // convert into functions
-    private int nonRandomSizeBytes; // convert into functions
+    private int rsaInputSizeBytes;
+    private int messageSizeBytes;
+    private int nonRandomSizeBytes;
 
     /***
      * Constructor. Create an RSA key with the given exponent and modulus.
@@ -33,7 +33,9 @@ public class RSAKey {
         exponent = theExponent;
         modulus = theModulus;
 
-        rsaInputSizeBytes = modulus.toByteArray().length - 1;
+        System.out.println("wtf?" + Arrays.toString(modulus.toByteArray()));
+        System.out.println((modulus.bitLength() - 1) / Byte.SIZE);
+        rsaInputSizeBytes = (modulus.bitLength() - 1) / Byte.SIZE; // -1 for reversible padding schema
         messageSizeBytes = rsaInputSizeBytes - PADDING_SIZE_BYTES - NONCE_SIZE_BYTES;
         nonRandomSizeBytes = rsaInputSizeBytes - NONCE_SIZE_BYTES;
     }
@@ -126,11 +128,7 @@ public class RSAKey {
                 break;
         }
 
-        byte[] unpadded = new byte[length];
-        for (int i = 0; i < length; i++)
-            unpadded[i] = input[i];
-
-        return unpadded;
+        return fit(input, length);
     }
 
     /***
@@ -172,8 +170,7 @@ public class RSAKey {
         System.out.println("Encoded using this prgen key: " + Arrays.toString(fit(nonce, PRGen.KEY_SIZE_BYTES)));
 
         byte[] encoded = fit(input, rsaInputSizeBytes);
-        for (int i = 0; i < NONCE_SIZE_BYTES; i++)
-            encoded[nonRandomSizeBytes + i] = nonce[i];
+        System.arraycopy(nonce, 0, encoded, nonRandomSizeBytes, NONCE_SIZE_BYTES);
 
         byte[] cipher = new byte[nonRandomSizeBytes];
         new PRGen(fit(nonce, PRGen.KEY_SIZE_BYTES)).nextBytes(cipher);
@@ -268,6 +265,8 @@ public class RSAKey {
         new PRGen(fit(nonce, PRGen.KEY_SIZE_BYTES)).nextBytes(cipher);
         xor(input, cipher, 0, nonRandomSizeBytes);
 
+        System.out.println("decoded: " + Arrays.toString(fit(input, messageSizeBytes)));
+
         for (int i = messageSizeBytes; i < nonRandomSizeBytes; i++) {
             if (input[i] != 0)
                 return null;
@@ -330,7 +329,6 @@ public class RSAKey {
         // IMPLEMENT THIS
 
         BigInteger decryptedBigInt = HW2Util.bytesToBigInteger(ciphertext).modPow(exponent, modulus);
-
         byte[] decrypted = HW2Util.bigIntegerToBytes(decryptedBigInt, rsaInputSizeBytes);
 
         System.out.println("\n*** decrypting ***");
@@ -387,15 +385,7 @@ public class RSAKey {
         byte[] decrypted = decrypt(signature);
         if (decrypted == null)
             return false;
-        byte[] hashed = HashFunction.computeHash(message);
-        if (decrypted.length != hashed.length)
-            return false;
-        for (int i = 0; i < hashed.length; i++) {
-            if (decrypted[i] != hashed[i])
-                return false;
-        }
-
-        return true;
+        return Arrays.equals(decrypted, HashFunction.computeHash(message));
     }
 
     public static void main(String[] args) {
@@ -409,7 +399,7 @@ public class RSAKey {
         System.out.println("publicKey.messageSizeBytes: " + publicKey.messageSizeBytes);
         System.out.println("publicKey.nonRandomSizeBytes: " + publicKey.nonRandomSizeBytes);
 
-        byte[] message = new byte[] { (byte) 0xff, 0x00, (byte) 0xff, 0x00, (byte) 0xff };
+        byte[] message = new byte[] { 0x00, 0x00 };
         System.out.println("Message array: " + Arrays.toString(message));
 
         byte[] padded = publicKey.addPadding(message);
@@ -425,13 +415,6 @@ public class RSAKey {
         byte[] decoded = publicKey.decodeOaep(encoded);
         System.out.println("Decoded array: " + Arrays.toString(decoded));
 
-        byte[] x = new byte[] { 12, 34, 56 };
-        byte[] cipher = new byte[] { 5, 43, 12 };
-        System.out.println("\n*** xor testing ***");
-        System.out.println("original:   " + Arrays.toString(x));
-        System.out.println("single xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
-        System.out.println("second xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
-
         System.out.println("\nTesting encryption/decryption:");
         System.out.println("rsaKP.getPrimes()[0]: " + rsaKP.getPrimes()[0]);
         System.out.println("rsaKP.getPrimes()[1]: " + rsaKP.getPrimes()[1]);
@@ -446,20 +429,29 @@ public class RSAKey {
         byte[] decrypted = privateKey.decrypt(encrypted);
         System.out.println("Decrypted: " + Arrays.toString(decrypted));
 
+        // byte[] x = new byte[] { 12, 34, 56 };
+        // byte[] cipher = new byte[] { 5, 43, 12 };
+        // System.out.println("\n*** xor testing ***");
+        // System.out.println("original: " + Arrays.toString(x));
+        // System.out.println("single xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
+        // System.out.println("second xor: " + Arrays.toString(xor(x, cipher, 0, 3)));
+
         System.out.println("\n*** signature testing ***");
         byte[] signature = privateKey.sign(message, rand);
         System.out.println("signature: " + Arrays.toString(signature));
-        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
+        System.out.println("signature verified? " +
+                publicKey.verifySignature(message, signature));
 
         signature[0] += 1;
         System.out.println("modified signature: " + Arrays.toString(signature));
-        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
+        System.out.println("signature verified? " +
+                publicKey.verifySignature(message, signature));
 
-        byte[] message2 = new byte[] { 1, 2, 3, 4, 5};
+        byte[] message2 = new byte[] { 1, 2, 3, 4, 5 };
         signature = privateKey.sign(message2, rand);
         System.out.println("signature on message2:" + Arrays.toString(signature));
-        System.out.println("signature verified? " + publicKey.verifySignature(message, signature));
-
+        System.out.println("signature verified? " +
+                publicKey.verifySignature(message, signature));
 
     }
 

@@ -25,7 +25,7 @@ import java.util.Arrays;
 public class KeyExchange {
     public static final int OUTPUT_SIZE_BYTES = PRF.OUTPUT_SIZE_BYTES;
     public static final int OUTPUT_SIZE_BITS = 8 * OUTPUT_SIZE_BYTES;
-    private static final int MAX_KEY_SIZE_BYTES = DHConstants.p.toByteArray().length - 1;
+    private static final int MAX_KEY_SIZE_BYTES = (DHConstants.p.bitLength() - 1) / Byte.SIZE;
 
     private BigInteger privateKey;
 
