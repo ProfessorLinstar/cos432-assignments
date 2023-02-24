@@ -19,9 +19,9 @@ public class RSAKey {
     private BigInteger exponent;
     private BigInteger modulus;
 
-    private int rsaInputSizeBytes;
-    private int messageSizeBytes;
-    private int nonRandomSizeBytes;
+    private int rsaInputSizeBytes; // size of input to RSA encryption (i.e. output of OAEP encoding) in bytes
+    private int messageSizeBytes; // size of plaintext message (with basic padding)
+    private int nonRandomSizeBytes; // size of messagse + integrity padding
 
     /***
      * Constructor. Create an RSA key with the given exponent and modulus.
@@ -33,8 +33,6 @@ public class RSAKey {
         exponent = theExponent;
         modulus = theModulus;
 
-        System.out.println("wtf?" + Arrays.toString(modulus.toByteArray()));
-        System.out.println((modulus.bitLength() - 1) / Byte.SIZE);
         rsaInputSizeBytes = (modulus.bitLength() - 1) / Byte.SIZE; // -1 for reversible padding schema
         messageSizeBytes = rsaInputSizeBytes - PADDING_SIZE_BYTES - NONCE_SIZE_BYTES;
         nonRandomSizeBytes = rsaInputSizeBytes - NONCE_SIZE_BYTES;
@@ -162,25 +160,20 @@ public class RSAKey {
     public byte[] encodeOaep(byte[] input, PRGen prgen) {
         // IMPLEMENT THIS
         assert input.length == messageSizeBytes;
-        System.out.println("\n*** encoding ***");
 
         byte[] nonce = new byte[NONCE_SIZE_BYTES];
-        prgen.nextBytes(nonce);
-
-        System.out.println("Encoded using this prgen key: " + Arrays.toString(fit(nonce, PRGen.KEY_SIZE_BYTES)));
-
         byte[] encoded = fit(input, rsaInputSizeBytes);
+        byte[] cipher = new byte[nonRandomSizeBytes];
+
+        // generate nonce and insert at end of encoding
+        prgen.nextBytes(nonce);
         System.arraycopy(nonce, 0, encoded, nonRandomSizeBytes, NONCE_SIZE_BYTES);
 
-        byte[] cipher = new byte[nonRandomSizeBytes];
+        // generate prg cipher for message + hash cipher for nonce
         new PRGen(fit(nonce, PRGen.KEY_SIZE_BYTES)).nextBytes(cipher);
-
         cipher = HashFunction.computeHash(xor(encoded, cipher, 0, nonRandomSizeBytes));
         xor(encoded, cipher, nonRandomSizeBytes, NONCE_SIZE_BYTES);
 
-        System.out.println("Encoding using this hasher: " + Arrays.toString(cipher));
-
-        System.out.println("*** encoded ***\n");
         return encoded;
     }
 
@@ -249,30 +242,22 @@ public class RSAKey {
     public byte[] decodeOaep(byte[] input) {
         // IMPLEMENT THIS
         assert input.length == rsaInputSizeBytes;
-        System.out.println("\n*** decoding ***");
-
-        byte[] cipher = HashFunction.computeHash(fit(input, nonRandomSizeBytes));
-
-        System.out.println("Recovered this hash cipher: " + Arrays.toString(cipher));
 
         // Recover nonce using hash cipher
+        byte[] cipher = HashFunction.computeHash(fit(input, nonRandomSizeBytes));
         byte[] nonce = xor(input, cipher, nonRandomSizeBytes, NONCE_SIZE_BYTES);
 
-        System.out.println("input after decoding nonce:" + Arrays.toString(input));
-        System.out.println("Decoded using this prgen key: " + Arrays.toString(fit(nonce, PRGen.KEY_SIZE_BYTES)));
-
+        // Recover original input using prg stream cipher
         cipher = new byte[nonRandomSizeBytes];
         new PRGen(fit(nonce, PRGen.KEY_SIZE_BYTES)).nextBytes(cipher);
         xor(input, cipher, 0, nonRandomSizeBytes);
 
-        System.out.println("decoded: " + Arrays.toString(fit(input, messageSizeBytes)));
-
+        // Verify integrity with zero padding check
         for (int i = messageSizeBytes; i < nonRandomSizeBytes; i++) {
             if (input[i] != 0)
                 return null;
         }
 
-        System.out.println("*** decoded ***\n");
         return fit(input, messageSizeBytes);
     }
 
@@ -302,16 +287,7 @@ public class RSAKey {
         byte[] padded = addPadding(plaintext);
         byte[] oaepEncoded = encodeOaep(padded, prgen);
         BigInteger encryptedBigInt = HW2Util.bytesToBigInteger(oaepEncoded).modPow(exponent, modulus);
-        byte[] encrypted = encryptedBigInt.toByteArray();
-
-        System.out.println("\n*** encrypting ***");
-        System.out.println("oaepEncoded: " + Arrays.toString(oaepEncoded));
-        System.out.println("oaepEncodedBigInt: " + HW2Util.bytesToBigInteger(oaepEncoded));
-        System.out.println("encryptedBigInt: " + encryptedBigInt);
-        System.out.println("encrypted: " + encrypted);
-        System.out.println("*** encrypted ***\n");
-
-        return encrypted;
+        return encryptedBigInt.toByteArray();
     }
 
     /***
@@ -327,18 +303,8 @@ public class RSAKey {
             throw new NullPointerException();
 
         // IMPLEMENT THIS
-
         BigInteger decryptedBigInt = HW2Util.bytesToBigInteger(ciphertext).modPow(exponent, modulus);
         byte[] decrypted = HW2Util.bigIntegerToBytes(decryptedBigInt, rsaInputSizeBytes);
-
-        System.out.println("\n*** decrypting ***");
-        System.out.println("ciphertext: " + HW2Util.bytesToBigInteger(ciphertext));
-        System.out.println("exponent: " + exponent);
-        System.out.println("modulus: " + modulus);
-        System.out.println("decryptedBigInt: " + decryptedBigInt);
-        System.out.println("decrypted: " + Arrays.toString(decrypted));
-        System.out.println("*** decrypted ***\n");
-
         byte[] decodedPadded = decodeOaep(decrypted);
         return decodedPadded != null ? removePadding(decodedPadded) : null;
     }

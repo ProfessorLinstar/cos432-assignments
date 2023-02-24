@@ -43,6 +43,7 @@ public class RSAKeyPair {
     public RSAKeyPair(PRGen rand, int numBits) {
         // IMPLEMENT THIS
 
+        // selectively choose coprimes to keep e fixed
         p = probableCoprime(numBits, rand);
         q = probableCoprime(numBits, rand);
 

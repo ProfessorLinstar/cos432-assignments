@@ -48,7 +48,7 @@ public class KeyExchange {
         // IMPLEMENT THIS
         byte[] privateKeyBytes = new byte[MAX_KEY_SIZE_BYTES];
         rand.nextBytes(privateKeyBytes);
-        privateKey = new BigInteger(privateKeyBytes);
+        privateKey = HW2Util.bytesToBigInteger(privateKeyBytes);
     }
 
     /***
@@ -88,17 +88,14 @@ public class KeyExchange {
         if (inMessage == null)
             throw new NullPointerException();
 
-        BigInteger inMessageBigInt = new BigInteger(inMessage);
-        if (inMessageBigInt.compareTo(BigInteger.ONE) <= 0 || inMessageBigInt.add(BigInteger.ONE).equals(DHConstants.p))
-            return null;
-
-        if (inMessageBigInt.compareTo(DHConstants.p) >= 0)
+        BigInteger inMessageBigInt = HW2Util.bytesToBigInteger(inMessage);
+        if (inMessageBigInt.compareTo(BigInteger.ONE) <= 0
+                || inMessageBigInt.compareTo(DHConstants.p.subtract(BigInteger.ONE)) >= 0)
             return null;
 
         BigInteger preHashSharedKey = inMessageBigInt.modPow(privateKey, DHConstants.p);
         return HashFunction.computeHash(preHashSharedKey.toByteArray());
     }
-
 
     public static void main(String[] args) {
         PRGen rand = new PRGen(new byte[PRGen.KEY_SIZE_BYTES]);
@@ -108,7 +105,6 @@ public class KeyExchange {
 
         byte[] out1 = ke1.prepareOutMessage();
         byte[] out2 = ke2.prepareOutMessage();
-
 
         byte[] shared1 = ke1.processInMessage(out2);
         byte[] shared2 = ke2.processInMessage(out1);
