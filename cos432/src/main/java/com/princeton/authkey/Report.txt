@@ -1,1 +1,16 @@
+Goals of adversary: compromise communications by
+ 1. obtaining nontrivial information about communications
+ 3. modifying communications
+ 2. impersonating a party
 
+Security promises:
+ 1. confidentiality
+ 2. integrity
+ 3. authenticity
+ 4. forward secrecy
+ 5. ordering
+
+Possible attacks:
+ 1. Man-in-the-middle attack
+ 2. Message tampering
+ 3. Replay attack

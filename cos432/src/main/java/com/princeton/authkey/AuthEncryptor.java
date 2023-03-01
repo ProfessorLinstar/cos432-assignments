@@ -20,6 +20,9 @@ public class AuthEncryptor {
     // Class constants.
     public static final int KEY_SIZE_BYTES = StreamCipher.KEY_SIZE_BYTES;
     public static final int NONCE_SIZE_BYTES = StreamCipher.NONCE_SIZE_BYTES;
+    public static final int MAC_SIZE_BYTES = PRF.OUTPUT_SIZE_BYTES;
+
+    private PRF prf;
 
     // Instance variables.
     // IMPLEMENT THIS
@@ -28,6 +31,7 @@ public class AuthEncryptor {
         assert key.length == KEY_SIZE_BYTES;
 
         // IMPLEMENT THIS
+        prf = new PRF(key);
     }
 
     // Encrypts the contents of <in> so that its confidentiality and integrity are
@@ -38,7 +42,16 @@ public class AuthEncryptor {
     // Returns a newly allocated byte[] containing the authenticated encryption of
     // the input.
     public byte[] authEncrypt(byte[] in, byte[] nonce, boolean includeNonce) {
-        throw new RuntimeException("Unimplemented.");
         // IMPLEMENT THIS
+        byte[] encKey = prf.eval(nonce);
+        byte[] encrypted = new byte[in.length + MAC_SIZE_BYTES + (includeNonce ? NONCE_SIZE_BYTES : 0)];
+
+        StreamCipher cipher = new StreamCipher(encKey, nonce);
+        cipher.cryptBytes(in, 0, encrypted, 0, in.length);
+        prf.eval(encrypted, 0, in.length, encrypted, in.length); // MAC generation
+        if (includeNonce)
+            System.arraycopy(nonce, 0, encrypted, encrypted.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
+
+        return encrypted;
     }
 }
