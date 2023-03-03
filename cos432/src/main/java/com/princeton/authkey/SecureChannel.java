@@ -48,7 +48,6 @@ public class SecureChannel extends InsecureChannel {
                 return;
             }
             byte[] keServer = ke.prepareOutMessage();
-            System.out.println("server: determined this concatenation: " + Arrays.toString(concatenate(keClient, keServer)));
 
             super.sendMessage(serverKey.encrypt(keServer, rand));
             super.sendMessage(serverKey.sign(concatenate(keClient, keServer), rand));
@@ -58,7 +57,6 @@ public class SecureChannel extends InsecureChannel {
             super.sendMessage(serverKey.encrypt(keClient, rand));
 
             byte[] keServer = serverKey.decrypt(super.receiveMessage());
-            System.out.println("client: determined this concatenation: " + Arrays.toString(concatenate(keClient, keServer)));
             if (!serverKey.verifySignature(concatenate(keClient, keServer), super.receiveMessage())) {
                 System.out.println("3");
                 close();
