@@ -1,6 +1,7 @@
 package com.princeton.authkey;
 
 import com.princeton.random.*;
+import java.util.Arrays;
 
 /**********************************************************************************/
 /* AuthEncryptor.java                                                             */
@@ -46,9 +47,12 @@ public class AuthEncryptor {
         byte[] encKey = prf.eval(nonce);
         byte[] encrypted = new byte[in.length + MAC_SIZE_BYTES + (includeNonce ? NONCE_SIZE_BYTES : 0)];
 
+        // System.out.println("using this encKey: " + Arrays.toString(encKey));
+
         StreamCipher cipher = new StreamCipher(encKey, nonce);
         cipher.cryptBytes(in, 0, encrypted, 0, in.length);
         prf.eval(encrypted, 0, in.length, encrypted, in.length); // MAC generation
+
         if (includeNonce)
             System.arraycopy(nonce, 0, encrypted, encrypted.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
 
