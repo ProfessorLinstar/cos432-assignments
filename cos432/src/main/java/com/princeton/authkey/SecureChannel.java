@@ -36,46 +36,55 @@ public class SecureChannel extends InsecureChannel {
         super(inStr, outStr);
         // IMPLEMENT THIS
 
+        KeyExchange ke = new KeyExchange(rand, iAmServer);
         byte[] key;
 
         if (iAmServer) {
-            KeyExchange ke = new KeyExchange(rand, iAmServer);
-            byte[] keInMessage = super.receiveMessage();
-            key = ke.processInMessage(keInMessage);
-            byte[] keOutMessage = ke.prepareOutMessage();
+            byte[] keClient = serverKey.decrypt(super.receiveMessage());
+            key = ke.processInMessage(keClient);
+            if (key == null) {
+                System.out.println("1");
+                close();
+                return;
+            }
+            byte[] keServer = ke.prepareOutMessage();
+            System.out.println("server: determined this concatenation: " + Arrays.toString(concatenate(keClient, keServer)));
 
-            byte[] returnMessage = new byte[keOutMessage.length + keInMessage.length];
-            System.arraycopy(keInMessage, 0, returnMessage, 0, keInMessage.length);
-            System.arraycopy(keOutMessage, 0, returnMessage, keInMessage.length, keOutMessage.length);
-
-            super.sendMessage(serverKey.encrypt(returnMessage, rand));
-            super.sendMessage(serverKey.sign(returnMessage, rand));
+            super.sendMessage(serverKey.encrypt(keServer, rand));
+            super.sendMessage(serverKey.sign(concatenate(keClient, keServer), rand));
 
         } else {
-            KeyExchange ke = new KeyExchange(rand, iAmServer);
-            byte[] outMessage = ke.prepareOutMessage();
-            super.sendMessage(serverKey.encrypt(outMessage, rand));
+            byte[] keClient = ke.prepareOutMessage();
+            super.sendMessage(serverKey.encrypt(keClient, rand));
 
-            byte[] inMessage = serverKey.decrypt(super.receiveMessage());
-            byte[] recoveredOutMessage = new byte[outMessage.length];
-            System.arraycopy(inMessage, 0, recoveredOutMessage, 0, outMessage.length);
-
-            if (serverKey.verifySignature(inMessage, super.receiveMessage())
-                    || !Arrays.equals(recoveredOutMessage, outMessage)) {
+            byte[] keServer = serverKey.decrypt(super.receiveMessage());
+            System.out.println("client: determined this concatenation: " + Arrays.toString(concatenate(keClient, keServer)));
+            if (!serverKey.verifySignature(concatenate(keClient, keServer), super.receiveMessage())) {
+                System.out.println("3");
                 close();
                 return;
             }
 
-            byte[] keInMessage = new byte[inMessage.length - outMessage.length];
-            System.arraycopy(inMessage, outMessage.length, keInMessage, 0, inMessage.length - outMessage.length);
-            key = ke.processInMessage(keInMessage);
-
+            key = ke.processInMessage(keServer);
+            if (key == null) {
+                System.out.println("2");
+                close();
+                return;
+            }
         }
 
         enc = new AuthEncryptor(key);
         dec = new AuthDecryptor(key);
         noncePrg = new PRGen(key);
         noncePrg.nextBytes(nonce);
+    }
+
+    // concatenates <a> and <b> into a new array
+    private byte[] concatenate(byte[] a, byte[] b) {
+        byte[] concatenated = new byte[a.length + b.length];
+        System.arraycopy(a, 0, concatenated, 0, a.length);
+        System.arraycopy(b, 0, concatenated, a.length, b.length);
+        return concatenated;
     }
 
     public void sendMessage(byte[] message) throws IOException {
@@ -89,5 +98,17 @@ public class SecureChannel extends InsecureChannel {
             return null;
         noncePrg.nextBytes(nonce);
         return inMessage;
+    }
+
+
+    public static void main(String[] args) {
+        PRGen rand = new PRGen(new byte[PRGen.KEY_SIZE_BYTES]);
+        RSAKeyPair rsakp = new RSAKeyPair(rand, 500);
+        RSAKey publicKey = rsakp.getPublicKey();
+        RSAKey privateKey = rsakp.getPrivateKey();
+
+        byte[] message = new byte[]{1, 2, 3};
+        byte[] signature = publicKey.sign(message, rand);
+        assert privateKey.verifySignature(message, signature);
     }
 }
