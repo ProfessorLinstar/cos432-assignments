@@ -51,8 +51,8 @@ public class KeyExchange {
         do {
             rand.nextBytes(privateKeyBytes);
             privateKeyBigInt = HW2Util.bytesToBigInteger(privateKeyBytes);
-        } while (privateKeyBigInt.compareTo(BigInteger.ONE) <= 0
-                || privateKeyBigInt.add(BigInteger.ONE).equals(DHConstants.p));
+        } while (privateKeyBigInt.equals(BigInteger.ZERO)
+                || privateKeyBigInt.equals(DHConstants.p.subtract(BigInteger.ONE)));
         privateKey = HW2Util.bytesToBigInteger(privateKeyBytes);
     }
 
