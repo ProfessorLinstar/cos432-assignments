@@ -33,7 +33,7 @@ public class RSAKey {
         exponent = theExponent;
         modulus = theModulus;
 
-        rsaInputSizeBytes = (modulus.bitLength() - 1) / Byte.SIZE; // -1 for reversible padding schema
+        rsaInputSizeBytes = (modulus.bitLength() - 1) / Byte.SIZE;
         messageSizeBytes = rsaInputSizeBytes - PADDING_SIZE_BYTES - NONCE_SIZE_BYTES;
         nonRandomSizeBytes = rsaInputSizeBytes - NONCE_SIZE_BYTES;
     }
@@ -304,6 +304,8 @@ public class RSAKey {
 
         // IMPLEMENT THIS
         BigInteger decryptedBigInt = HW2Util.bytesToBigInteger(ciphertext).modPow(exponent, modulus);
+        if ((decryptedBigInt.bitLength() - 1) / 8 > rsaInputSizeBytes)
+            return null;
         byte[] decrypted = HW2Util.bigIntegerToBytes(decryptedBigInt, rsaInputSizeBytes);
         byte[] decodedPadded = decodeOaep(decrypted);
         return decodedPadded != null ? removePadding(decodedPadded) : null;
@@ -419,6 +421,8 @@ public class RSAKey {
         System.out.println("signature verified? " +
                 publicKey.verifySignature(message, signature));
 
+        System.out.println("biginteger.tobytearray(-1): " + Arrays.toString(BigInteger.valueOf(-1).toByteArray()));
+        System.out.println("biginteger.tobytearray(1): " + Arrays.toString(BigInteger.valueOf(1).toByteArray()));
     }
 
 }

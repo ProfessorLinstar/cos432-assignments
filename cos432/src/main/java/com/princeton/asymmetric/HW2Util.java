@@ -1,6 +1,7 @@
 package com.princeton.asymmetric;
 
 import java.math.BigInteger;
+import java.util.Arrays;
 
 /***
  * This utility class helps facilitate conversion between BigInteger and byte[].
@@ -73,5 +74,15 @@ public class HW2Util {
                     "(" + rawByteArray.length + " > " + outputSize + ")");
         }
         return ret;
+    }
+
+    public static void main(String[] args) {
+        byte[] bytes = new byte[]{1, 0};
+        BigInteger bigInt = bytesToBigInteger(bytes);
+
+        System.out.println("bytes: " + Arrays.toString(bytes));
+        System.out.println("bytesToBigInteger(bytes): " + bigInt);
+        System.out.println("bigIntegerToBytes(bytesToBigInteger(bytes), 1): " + Arrays.toString(bigIntegerToBytes(bigInt, 1)));
+        System.out.println("bigIntegerToBytes(bytesToBigInteger(bytes), 2): " + Arrays.toString(bigIntegerToBytes(bigInt, 2)));
     }
 }

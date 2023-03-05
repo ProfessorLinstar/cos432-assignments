@@ -94,7 +94,7 @@ public class AuthDecryptor {
         int maxLength = 20;
 
         for (int i = 0; i < 1000; i++) {
-            int length = prg.nextInt(0, maxLength);
+            int length = prg.nextInt(maxLength);
 
             byte[] message = new byte[length];
             byte[] key = new byte[StreamCipher.KEY_SIZE_BYTES];
