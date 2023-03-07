@@ -47,13 +47,12 @@ public class KeyExchange {
     public KeyExchange(PRGen rand, boolean iAmServer) {
         // IMPLEMENT THIS
         byte[] privateKeyBytes = new byte[MAX_KEY_SIZE_BYTES];
-        BigInteger privateKeyBigInt;
+        BigInteger publicValue;
         do {
             rand.nextBytes(privateKeyBytes);
-            privateKeyBigInt = HW2Util.bytesToBigInteger(privateKeyBytes);
-        } while (privateKeyBigInt.equals(BigInteger.ZERO)
-                || privateKeyBigInt.equals(DHConstants.p.subtract(BigInteger.ONE)));
-        privateKey = HW2Util.bytesToBigInteger(privateKeyBytes);
+            privateKey = HW2Util.bytesToBigInteger(privateKeyBytes);
+            publicValue = DHConstants.g.modPow(privateKey, DHConstants.p);
+        } while (publicValue.equals(BigInteger.ONE) || publicValue.equals(DHConstants.p.subtract(BigInteger.ONE)));
     }
 
     /***
