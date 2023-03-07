@@ -80,7 +80,11 @@ public class AuthDecryptor {
         // Arrays.toString(decrypted));
 
         byte[] mac = prf.eval(in, 0, decrypted.length);
-        // System.out.println("found this mac: " + Arrays.toString(mac));
+        byte[] slice = new byte[mac.length];
+        for (int i = 0; i < mac.length; i++)
+            slice[i] = in[decrypted.length + i];
+        System.out.println("found this mac:       " + Arrays.toString(mac));
+        System.out.println("comparing with slice: " + Arrays.toString(slice));
         for (int i = 0; i < mac.length; i++) {
             if (mac[i] != in[decrypted.length + i])
                 return null;
@@ -128,6 +132,5 @@ public class AuthDecryptor {
             assert Arrays.equals(message, decrypted);
 
         }
-
     }
 }
