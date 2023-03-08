@@ -1,14 +1,56 @@
-Goals of adversary: compromise communications by
- 1. obtaining nontrivial information about communications
- 3. modifying communications
+Report.txt
+Andy Wang
+
+The goals of the adversary in this threat model are:
+ 1. obtaining nontrivial information about the content of communications
+ 3. tampering with communications secretly
  2. impersonating a party
 
-Security promises:
+Put differently, the adversary's goal is to attack any one of the security
+promises that we guarantee:
  1. confidentiality
  2. integrity
  3. authenticity
  4. forward secrecy
  5. ordering
+We assume that the adversary is has network-level abilities, meaning that they
+can see any communications through the network (e.g. the "channel" in this
+assignment), and that they are able to modify these communications without
+being detected. 
+
+In the following section we list possible attacks that the adversary can
+perform against each of these security promises, and we describe our defenses
+against such attacks.
+
+ 1. Confidentiality
+The adversary may attempt to compromise the confidentiality of a message by
+simply reading any messages sent throughout the network. We defend against this
+by using authenticated Diffie-Hellman key exchange to bootstrap a shared key,
+and then encrypted all communications using this key. MITM attacks can also
+compromise confidentiality; we cover this in the authenticity section.
+
+ 2. Integrity
+The contents of a message can be corrupted by an adversary, even without them
+knowing exactly what the contents of the message are. To detect these kinds of
+attacks, we attach a MAC to each message, and drop any message which does not
+match its MAC.
+
+ 3. Authenticity
+The adversary may attempt to impersonate one or more parties by intercepting
+and controlling communications during the key exchange bootstrapping process
+via a man-in-the-middle (MITM) attack. To ensure authenticity, we require the
+server to sign its Diffie-Hellman message with an RSA signature. This allows
+the client to verify that the Diffie-Hellman message is indeed from the server.
+Note that the same kind of authentication in the reverse direction is not
+necessary, since once the client verifies the signature, both the client and
+server will be able to agree on a shared private key; knowledge of the private
+key will server as authentcation going forward.
+
+ 4. Forward Secrecy
+To prevent the compromise of a private key from compromising all previous
+communications, 
+
+ 5. Ordering
 
 Possible attacks:
  1. Man-in-the-middle attack

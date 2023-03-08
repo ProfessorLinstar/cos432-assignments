@@ -23,7 +23,8 @@ public class AuthEncryptor {
     public static final int NONCE_SIZE_BYTES = StreamCipher.NONCE_SIZE_BYTES;
     public static final int MAC_SIZE_BYTES = PRF.OUTPUT_SIZE_BYTES;
 
-    private PRF prf;
+    private PRF encPrf;
+    private PRF macPrf;
 
     // Instance variables.
     // IMPLEMENT THIS
@@ -32,7 +33,13 @@ public class AuthEncryptor {
         assert key.length == KEY_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        prf = new PRF(key);
+        key = key.clone();
+        PRGen prg = new PRGen(key);
+
+        prg.nextBytes(key);
+        encPrf = new PRF(key);
+        prg.nextBytes(key);
+        macPrf = new PRF(key);
     }
 
     // Encrypts the contents of <in> so that its confidentiality and integrity are
@@ -44,17 +51,29 @@ public class AuthEncryptor {
     // the input.
     public byte[] authEncrypt(byte[] in, byte[] nonce, boolean includeNonce) {
         // IMPLEMENT THIS
-        byte[] encKey = prf.eval(nonce);
+        assert nonce.length == NONCE_SIZE_BYTES;
+        byte[] encKey = encPrf.eval(nonce);
         byte[] encrypted = new byte[in.length + MAC_SIZE_BYTES + (includeNonce ? NONCE_SIZE_BYTES : 0)];
 
         // System.out.println("using this encKey: " + Arrays.toString(encKey));
 
         StreamCipher cipher = new StreamCipher(encKey, nonce);
         cipher.cryptBytes(in, 0, encrypted, 0, in.length);
-        prf.eval(encrypted, 0, in.length, encrypted, in.length); // MAC generation
+        System.out.println("updating macPrf with this nonce: " + Arrays.toString(nonce));
+        macPrf.update(nonce);
+        System.out.println("encrypted pre-mac: " + Arrays.toString(encrypted));
+        macPrf.eval(encrypted, 0, in.length, encrypted, in.length); // MAC generation
+        
+
+        byte[] macEnc = new byte[PRF.OUTPUT_SIZE_BYTES];
+        System.arraycopy(encrypted, in.length, macEnc, 0, macEnc.length);
+        System.out.println("macEnc: " + Arrays.toString(macEnc));
+        System.out.println("encrypted post-mac:" + Arrays.toString(encrypted));
 
         if (includeNonce)
             System.arraycopy(nonce, 0, encrypted, encrypted.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
+
+        System.out.println("encrypted postnonc:" + Arrays.toString(encrypted));
 
         return encrypted;
     }

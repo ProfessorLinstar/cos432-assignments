@@ -20,7 +20,8 @@ public class AuthDecryptor {
     public static final int NONCE_SIZE_BYTES = AuthEncryptor.NONCE_SIZE_BYTES;
     public static final int MAC_SIZE_BYTES = AuthEncryptor.MAC_SIZE_BYTES;
 
-    private PRF prf;
+    private PRF encPrf;
+    private PRF macPrf;
 
     // Instance variables.
     // IMPLEMENT THIS
@@ -29,7 +30,13 @@ public class AuthDecryptor {
         assert key.length == KEY_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        prf = new PRF(key);
+        key = key.clone();
+        PRGen prg = new PRGen(key);
+
+        prg.nextBytes(key);
+        encPrf = new PRF(key);
+        prg.nextBytes(key);
+        macPrf = new PRF(key);
     }
 
     // Decrypts and authenticates the contents of <in>. <in> should have been
@@ -39,9 +46,10 @@ public class AuthDecryptor {
     // plaintext value that was originally encrypted.
     public byte[] authDecrypt(byte[] in) {
         // IMPLEMENT THIS
-        byte[] decKey = prf.eval(in, in.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
+        byte[] decKey = encPrf.eval(in, in.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
         byte[] decrypted = new byte[in.length - MAC_SIZE_BYTES - NONCE_SIZE_BYTES];
         StreamCipher cipher = new StreamCipher(decKey, in, in.length - NONCE_SIZE_BYTES);
+        macPrf.update(in, in.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
 
         // System.out.println("Got this decKey : " + Arrays.toString(decKey));
 
@@ -57,9 +65,11 @@ public class AuthDecryptor {
         assert nonce != null && nonce.length == NONCE_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        byte[] decKey = prf.eval(nonce);
+        byte[] decKey = encPrf.eval(nonce);
         byte[] decrypted = new byte[in.length - MAC_SIZE_BYTES];
         StreamCipher cipher = new StreamCipher(decKey, nonce);
+        System.out.println("updating macPrf with this nonce: " + Arrays.toString(nonce));
+        macPrf.update(nonce);
 
         // System.out.println("Got this decKey : " + Arrays.toString(decKey));
 
@@ -79,14 +89,15 @@ public class AuthDecryptor {
         // System.out.println("decrypted post decryption: " +
         // Arrays.toString(decrypted));
 
-        byte[] mac = prf.eval(in, 0, decrypted.length);
-        byte[] slice = new byte[mac.length];
-        for (int i = 0; i < mac.length; i++)
-            slice[i] = in[decrypted.length + i];
-        System.out.println("found this mac:       " + Arrays.toString(mac));
-        System.out.println("comparing with slice: " + Arrays.toString(slice));
-        for (int i = 0; i < mac.length; i++) {
-            if (mac[i] != in[decrypted.length + i])
+        byte[] macDec = macPrf.eval(in, 0, decrypted.length);
+        System.out.println("in:     " + Arrays.toString(in));
+        System.out.println("macDec: " + Arrays.toString(macDec));
+        byte[] macEnc = new byte[PRF.OUTPUT_SIZE_BYTES];
+        System.arraycopy(in, decrypted.length, macEnc, 0, macEnc.length);
+        System.out.println("macEnc: " + Arrays.toString(macEnc));
+
+        for (int i = 0; i < macDec.length; i++) {
+            if (macDec[i] != in[decrypted.length + i])
                 return null;
         }
 
@@ -117,9 +128,12 @@ public class AuthDecryptor {
 
             System.out.println();
 
-            byte[] encrypted = encryptor.authEncrypt(message, nonce, true);
+            byte[] encrypted;
+            byte[] decrypted;
+
+            encrypted = encryptor.authEncrypt(message, nonce, true);
             System.out.println("encrypted               : " + Arrays.toString(encrypted));
-            byte[] decrypted = decryptor.authDecrypt(encrypted);
+            decrypted = decryptor.authDecrypt(encrypted);
             System.out.println("decrypted               : " + Arrays.toString(decrypted));
             assert Arrays.equals(message, decrypted);
 
