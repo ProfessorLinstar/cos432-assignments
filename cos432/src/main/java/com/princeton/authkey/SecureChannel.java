@@ -49,7 +49,7 @@ public class SecureChannel extends InsecureChannel {
         } else {
             super.sendMessage(ke.prepareOutMessage());
             key = ke.processInMessage(super.receiveMessage());
-            if (!serverKey.verifySignature(key, super.receiveMessage()))
+            if (key != null && !serverKey.verifySignature(key, super.receiveMessage()))
                 key = null;
 
         }
@@ -85,9 +85,6 @@ public class SecureChannel extends InsecureChannel {
     // this.nonceIn. if nonce matches, then uses this.dec to decrypt the
     // message and returns the result. otherwise returns null.
     private byte[] decrypt(byte[] message) {
-        System.out.println("Receiving message = " + Arrays.toString(message));
-        System.out.println("\tnonce: " + Arrays.toString(nonceIn));
-
         if (message.length < nonceIn.length)
             return null;
         for (int i = 0; i < nonceIn.length; i++) {
@@ -100,10 +97,6 @@ public class SecureChannel extends InsecureChannel {
     public void sendMessage(byte[] message) throws IOException {
         // IMPLEMENT THIS
         byte[] encrypted = enc.authEncrypt(message, nonceOut, true);
-        System.out.println("Sending message = " + Arrays.toString(message));
-        System.out.println("\tnonce: " + Arrays.toString(nonceOut));
-        System.out.println("\tencrypted: " + Arrays.toString(encrypted));
-
         super.sendMessage(encrypted);
         nonceOutPrg.nextBytes(nonceOut);
     }
@@ -111,8 +104,6 @@ public class SecureChannel extends InsecureChannel {
     public byte[] receiveMessage() throws IOException {
         // IMPLEMENT THIS
         byte[] inMessage = decrypt(super.receiveMessage());
-        System.out.println("\tdecrypted: " + Arrays.toString(inMessage));
-
         if (inMessage == null)
             close();
 

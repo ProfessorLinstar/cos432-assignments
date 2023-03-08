@@ -30,11 +30,10 @@ public class AuthDecryptor {
         assert key.length == KEY_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        key = key.clone();
         PRGen prg = new PRGen(key);
 
-        prg.nextBytes(key);
         decPrf = new PRF(key);
+        key = new byte[KEY_SIZE_BYTES];
         prg.nextBytes(key);
         macPrf = new PRF(key);
     }
@@ -75,7 +74,6 @@ public class AuthDecryptor {
     // plaintext value that was originally encrypted.
     private byte[] authDecrypt(byte[] in, int decryptedLength, byte[] nonce) {
         byte[] decrypted = new byte[decryptedLength];
-        new StreamCipher(decPrf.eval(nonce), nonce).cryptBytes(in, 0, decrypted, 0, decrypted.length);
 
         macPrf.update(nonce);
         byte[] macDec = macPrf.eval(in, 0, decrypted.length);
@@ -85,6 +83,7 @@ public class AuthDecryptor {
                 return null;
         }
 
+        new StreamCipher(decPrf.eval(nonce), nonce).cryptBytes(in, 0, decrypted, 0, decrypted.length);
         return decrypted;
     }
 

@@ -32,11 +32,10 @@ public class AuthEncryptor {
         assert key.length == KEY_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        key = key.clone();
         PRGen prg = new PRGen(key);
 
-        prg.nextBytes(key);
         encPrf = new PRF(key);
+        key = key.clone();
         prg.nextBytes(key);
         macPrf = new PRF(key);
     }
