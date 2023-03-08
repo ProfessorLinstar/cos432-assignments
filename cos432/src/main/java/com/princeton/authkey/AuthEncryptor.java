@@ -1,7 +1,6 @@
 package com.princeton.authkey;
 
 import com.princeton.random.*;
-import java.util.Arrays;
 
 /**********************************************************************************/
 /* AuthEncryptor.java                                                             */
@@ -52,28 +51,14 @@ public class AuthEncryptor {
     public byte[] authEncrypt(byte[] in, byte[] nonce, boolean includeNonce) {
         // IMPLEMENT THIS
         assert nonce.length == NONCE_SIZE_BYTES;
-        byte[] encKey = encPrf.eval(nonce);
         byte[] encrypted = new byte[in.length + MAC_SIZE_BYTES + (includeNonce ? NONCE_SIZE_BYTES : 0)];
 
-        // System.out.println("using this encKey: " + Arrays.toString(encKey));
-
-        StreamCipher cipher = new StreamCipher(encKey, nonce);
-        cipher.cryptBytes(in, 0, encrypted, 0, in.length);
-        System.out.println("updating macPrf with this nonce: " + Arrays.toString(nonce));
+        new StreamCipher(encPrf.eval(nonce), nonce).cryptBytes(in, 0, encrypted, 0, in.length);
         macPrf.update(nonce);
-        System.out.println("encrypted pre-mac: " + Arrays.toString(encrypted));
         macPrf.eval(encrypted, 0, in.length, encrypted, in.length); // MAC generation
-        
-
-        byte[] macEnc = new byte[PRF.OUTPUT_SIZE_BYTES];
-        System.arraycopy(encrypted, in.length, macEnc, 0, macEnc.length);
-        System.out.println("macEnc: " + Arrays.toString(macEnc));
-        System.out.println("encrypted post-mac:" + Arrays.toString(encrypted));
 
         if (includeNonce)
             System.arraycopy(nonce, 0, encrypted, encrypted.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
-
-        System.out.println("encrypted postnonc:" + Arrays.toString(encrypted));
 
         return encrypted;
     }

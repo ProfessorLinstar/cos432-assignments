@@ -20,7 +20,7 @@ public class AuthDecryptor {
     public static final int NONCE_SIZE_BYTES = AuthEncryptor.NONCE_SIZE_BYTES;
     public static final int MAC_SIZE_BYTES = AuthEncryptor.MAC_SIZE_BYTES;
 
-    private PRF encPrf;
+    private PRF decPrf;
     private PRF macPrf;
 
     // Instance variables.
@@ -34,7 +34,7 @@ public class AuthDecryptor {
         PRGen prg = new PRGen(key);
 
         prg.nextBytes(key);
-        encPrf = new PRF(key);
+        decPrf = new PRF(key);
         prg.nextBytes(key);
         macPrf = new PRF(key);
     }
@@ -46,14 +46,11 @@ public class AuthDecryptor {
     // plaintext value that was originally encrypted.
     public byte[] authDecrypt(byte[] in) {
         // IMPLEMENT THIS
-        byte[] decKey = encPrf.eval(in, in.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
-        byte[] decrypted = new byte[in.length - MAC_SIZE_BYTES - NONCE_SIZE_BYTES];
-        StreamCipher cipher = new StreamCipher(decKey, in, in.length - NONCE_SIZE_BYTES);
-        macPrf.update(in, in.length - NONCE_SIZE_BYTES, NONCE_SIZE_BYTES);
-
-        // System.out.println("Got this decKey : " + Arrays.toString(decKey));
-
-        return authDecrypt(in, decrypted, cipher);
+        if (in.length < NONCE_SIZE_BYTES + MAC_SIZE_BYTES)
+            return null;
+        byte[] nonce = new byte[NONCE_SIZE_BYTES];
+        System.arraycopy(in, in.length - NONCE_SIZE_BYTES, nonce, 0, nonce.length);
+        return authDecrypt(in, in.length - MAC_SIZE_BYTES - NONCE_SIZE_BYTES, nonce);
     }
 
     // Decrypts and authenticates the contents of <in>. <in> should have been
@@ -65,36 +62,23 @@ public class AuthDecryptor {
         assert nonce != null && nonce.length == NONCE_SIZE_BYTES;
 
         // IMPLEMENT THIS
-        byte[] decKey = encPrf.eval(nonce);
-        byte[] decrypted = new byte[in.length - MAC_SIZE_BYTES];
-        StreamCipher cipher = new StreamCipher(decKey, nonce);
-        System.out.println("updating macPrf with this nonce: " + Arrays.toString(nonce));
-        macPrf.update(nonce);
-
-        // System.out.println("Got this decKey : " + Arrays.toString(decKey));
-
-        return authDecrypt(in, decrypted, cipher);
+        if (in.length < MAC_SIZE_BYTES)
+            return null;
+        return authDecrypt(in, in.length - MAC_SIZE_BYTES, nonce);
     }
 
     // Decrypts and authenticates the contents of <in>. <in> should have been
-    // encrypted using your implementation of AuthEncryptor, with key <decKey>
-    // and cipher <cipher>. If the integrity of <in> cannot be verified, then
-    // returns null. Otherwise, returns a newly allocated byte[] containing the
+    // encrypted using your implementation of AuthEncryptor, and the original
+    // message should be <decryptedLength> long, and hsould ahve been encrypted
+    // using <nonce> If the integrity of <in> cannot be verified, then returns
+    // null. Otherwise, returns a newly allocated byte[] containing the
     // plaintext value that was originally encrypted.
-    private byte[] authDecrypt(byte[] in, byte[] decrypted, StreamCipher cipher) {
+    private byte[] authDecrypt(byte[] in, int decryptedLength, byte[] nonce) {
+        byte[] decrypted = new byte[decryptedLength];
+        new StreamCipher(decPrf.eval(nonce), nonce).cryptBytes(in, 0, decrypted, 0, decrypted.length);
 
-        // System.out.println("decrypted pre decryption: " +
-        // Arrays.toString(decrypted));
-        cipher.cryptBytes(in, 0, decrypted, 0, decrypted.length);
-        // System.out.println("decrypted post decryption: " +
-        // Arrays.toString(decrypted));
-
+        macPrf.update(nonce);
         byte[] macDec = macPrf.eval(in, 0, decrypted.length);
-        System.out.println("in:     " + Arrays.toString(in));
-        System.out.println("macDec: " + Arrays.toString(macDec));
-        byte[] macEnc = new byte[PRF.OUTPUT_SIZE_BYTES];
-        System.arraycopy(in, decrypted.length, macEnc, 0, macEnc.length);
-        System.out.println("macEnc: " + Arrays.toString(macEnc));
 
         for (int i = 0; i < macDec.length; i++) {
             if (macDec[i] != in[decrypted.length + i])
