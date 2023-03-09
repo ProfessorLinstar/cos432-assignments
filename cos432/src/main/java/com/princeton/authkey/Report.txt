@@ -3,7 +3,7 @@ Andy Wang
 
 The goals of the adversary in this threat model are:
  1. obtaining nontrivial information about the content of communications
- 3. tampering with communications secretly
+ 3. tampering with communications
  2. impersonating a party
 
 Put differently, the adversary's goal is to attack any one of the security
@@ -27,7 +27,10 @@ The adversary may attempt to compromise the confidentiality of a message by
 simply reading any messages sent throughout the network. We defend against this
 by using authenticated Diffie-Hellman key exchange to bootstrap a shared key,
 and then encrypted all communications using this key. MITM attacks can also
-compromise confidentiality; we cover this in the authenticity section.
+compromise confidentiality; we cover this in the authenticity section. It is
+also possible for an adversary to learn information about a group of messages
+if the same encryption key is reused multiple times, so to prevent this we use
+a random nonce each time we use the shared key to generate an encryption key.
 
  2. Integrity
 The contents of a message can be corrupted by an adversary, even without them
@@ -47,12 +50,16 @@ server will be able to agree on a shared private key; knowledge of the private
 key will server as authentcation going forward.
 
  4. Forward Secrecy
-To prevent the compromise of a private key from compromising all previous
-communications, 
+If the adversary learns of the encryption key at any given moment, the
+encryption keys for previous messages should not be compromised. To ensure that
+this is the case, we encrypt messages such that each ciphertext depends on a
+unique nonce, whose (expected) value is known by both the server and the
+client.
 
  5. Ordering
-
-Possible attacks:
- 1. Man-in-the-middle attack
- 2. Message tampering
- 3. Replay attack
+The adversary can attack the integrity not of individual communications, but
+the stream as a whole, by scrambling the order of messages. To protect against
+this, we require both the client and server to keep track of the current
+expected nonce for the next incoming/outgoing message. If the expected nonce
+does not match the actual nonce, then the parties consider that to be an attack
+and they close the channel.

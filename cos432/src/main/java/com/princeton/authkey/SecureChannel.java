@@ -3,8 +3,6 @@ package com.princeton.authkey;
 import com.princeton.random.*;
 import com.princeton.asymmetric.*;
 
-import java.util.Arrays;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -39,24 +37,24 @@ public class SecureChannel extends InsecureChannel {
         // IMPLEMENT THIS
 
         KeyExchange ke = new KeyExchange(rand, iAmServer);
-        byte[] key;
+        byte[] key = null;
+
+        super.sendMessage(ke.prepareOutMessage());
+        byte[] inMessage = super.receiveMessage();
+        if (inMessage != null) {
+            key = ke.processInMessage(inMessage);
+        }
 
         if (iAmServer) {
-            key = ke.processInMessage(super.receiveMessage());
-            super.sendMessage(ke.prepareOutMessage());
             super.sendMessage(key != null ? serverKey.sign(key, rand) : new byte[] {});
-
         } else {
-            super.sendMessage(ke.prepareOutMessage());
-            key = ke.processInMessage(super.receiveMessage());
-            if (key != null && !serverKey.verifySignature(key, super.receiveMessage()))
+            byte[] signature = super.receiveMessage();
+            if (signature == null || key != null && !serverKey.verifySignature(key, signature))
                 key = null;
-
         }
 
         if (key == null) {
             close();
-            System.out.println("failed!");
             return;
         }
 
@@ -64,6 +62,8 @@ public class SecureChannel extends InsecureChannel {
         dec = new AuthDecryptor(key);
 
         PRGen prg = new PRGen(key);
+        prg.nextBytes(key);
+
         byte[] nonceInKey = new byte[PRGen.KEY_SIZE_BYTES];
         byte[] nonceOutKey = new byte[PRGen.KEY_SIZE_BYTES];
         if (iAmServer) {

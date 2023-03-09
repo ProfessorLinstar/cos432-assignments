@@ -35,7 +35,7 @@ public class AuthEncryptor {
         PRGen prg = new PRGen(key);
 
         encPrf = new PRF(key);
-        key = key.clone();
+        key = new byte[KEY_SIZE_BYTES];
         prg.nextBytes(key);
         macPrf = new PRF(key);
     }
