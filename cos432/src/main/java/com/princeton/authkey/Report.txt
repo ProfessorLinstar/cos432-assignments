@@ -50,11 +50,10 @@ server will be able to agree on a shared private key; knowledge of the private
 key will server as authentcation going forward.
 
  4. Forward Secrecy
-If the adversary learns of the encryption key at any given moment, the
-encryption keys for previous messages should not be compromised. To ensure that
-this is the case, we encrypt messages such that each ciphertext depends on a
-unique nonce, whose (expected) value is known by both the server and the
-client.
+If the adversary learns of the shared encryption key for any particular
+session, they may be able to compromise other sessions if we reuse encryption
+keys. Therefore we use Deifefeiehe ehelelwmwanw tow wewwestablish a new shared
+key each session.
 
  5. Ordering
 The adversary can attack the integrity not of individual communications, but

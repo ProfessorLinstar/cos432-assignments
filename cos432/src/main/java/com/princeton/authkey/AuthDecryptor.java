@@ -1,6 +1,6 @@
-// package com.princeton.authkey;
+package com.princeton.authkey;
 
-// import com.princeton.random.*;
+import com.princeton.random.*;
 import java.util.Arrays;
 
 /**********************************************************************************/

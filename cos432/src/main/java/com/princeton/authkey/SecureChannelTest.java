@@ -1,7 +1,7 @@
-// package com.princeton.authkey;
+package com.princeton.authkey;
 
-// import com.princeton.random.*;
-// import com.princeton.asymmetric.*;
+import com.princeton.random.*;
+import com.princeton.asymmetric.*;
 
 import java.io.*;
 import java.util.Random;
