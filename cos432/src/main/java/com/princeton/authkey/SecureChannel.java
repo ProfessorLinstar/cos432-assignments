@@ -27,6 +27,17 @@ public class SecureChannel extends InsecureChannel {
     private byte[] nonceIn = new byte[AuthEncryptor.NONCE_SIZE_BYTES];
     private byte[] nonceOut = new byte[AuthEncryptor.NONCE_SIZE_BYTES];
 
+    // closes channel and clears instance variables
+    public void close() throws IOException {
+        super.close();
+        enc = null;
+        dec = null;
+        nonceInPrg = null;
+        nonceOutPrg = null;
+        nonceIn = null;
+        nonceOut = null;
+    }
+
     public SecureChannel(InputStream inStr, OutputStream outStr,
             PRGen rand, boolean iAmServer,
             RSAKey serverKey) throws IOException {
@@ -39,21 +50,22 @@ public class SecureChannel extends InsecureChannel {
         KeyExchange ke = new KeyExchange(rand, iAmServer);
         byte[] key = null;
 
+        // initiate DH-key exchange
         super.sendMessage(ke.prepareOutMessage());
         byte[] inMessage = super.receiveMessage();
         if (inMessage != null) {
             key = ke.processInMessage(inMessage);
         }
 
-        if (iAmServer) {
+        if (iAmServer) { // server: send signature to client
             super.sendMessage(key != null ? serverKey.sign(key, rand) : new byte[] {});
-        } else {
+        } else { // client: verify server's signature
             byte[] signature = super.receiveMessage();
             if (signature == null || key != null && !serverKey.verifySignature(key, signature))
                 key = null;
         }
 
-        if (key == null) {
+        if (key == null) { // if any problems were detected in reaching agreement on key, give up
             close();
             return;
         }
@@ -61,12 +73,13 @@ public class SecureChannel extends InsecureChannel {
         enc = new AuthEncryptor(key);
         dec = new AuthDecryptor(key);
 
-        PRGen prg = new PRGen(key);
+        PRGen prg = new PRGen(key); // assumes that PRGen.OUTPUT_SIZE_BYTES == PRGen.KEY_SIZE_BYTES
         prg.nextBytes(key);
 
+        // initialize nonces/PRG's for generating nonces for inChannel and outChannel
         byte[] nonceInKey = new byte[PRGen.KEY_SIZE_BYTES];
         byte[] nonceOutKey = new byte[PRGen.KEY_SIZE_BYTES];
-        if (iAmServer) {
+        if (iAmServer) { // nonceIn of server should be nonceOut of client and vice versa
             prg.nextBytes(nonceInKey);
             prg.nextBytes(nonceOutKey);
         } else {
@@ -103,11 +116,10 @@ public class SecureChannel extends InsecureChannel {
 
     public byte[] receiveMessage() throws IOException {
         // IMPLEMENT THIS
-        byte[] inMessage = decrypt(super.receiveMessage());
-        if (inMessage == null)
-            close();
+        byte[] inMessage = decrypt(super.receiveMessage()); // check that nonce is correct and decrypt
 
-        nonceInPrg.nextBytes(nonceIn);
+        if (inMessage != null) // if no problems detected in processing inMessage, move on to the next nonce
+            nonceInPrg.nextBytes(nonceIn);
         return inMessage;
     }
 
