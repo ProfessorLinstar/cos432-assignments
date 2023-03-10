@@ -7,8 +7,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import java.io.*;
-
 public class SecureChannel extends InsecureChannel {
     // This is just like an InsecureChannel, except that it provides
     // authenticated encryption for the messages that pass
