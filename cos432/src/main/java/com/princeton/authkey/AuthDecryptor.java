@@ -20,11 +20,11 @@ public class AuthDecryptor {
     public static final int NONCE_SIZE_BYTES = AuthEncryptor.NONCE_SIZE_BYTES;
     public static final int MAC_SIZE_BYTES = AuthEncryptor.MAC_SIZE_BYTES;
 
-    private PRF decPrf;
-    private PRF macPrf;
-
     // Instance variables.
     // IMPLEMENT THIS
+
+    private byte[] key;
+    private PRF macPrf;
 
     public AuthDecryptor(byte[] key) {
         assert key.length == KEY_SIZE_BYTES;
@@ -32,10 +32,10 @@ public class AuthDecryptor {
         // IMPLEMENT THIS
         PRGen prg = new PRGen(key);
 
-        decPrf = new PRF(key);
-        key = new byte[KEY_SIZE_BYTES];
-        prg.nextBytes(key);
-        macPrf = new PRF(key);
+        this.key = new byte[KEY_SIZE_BYTES];
+        prg.nextBytes(this.key);
+        macPrf = new PRF(this.key); // generate a MAC PRF using a randomly generated key
+        prg.nextBytes(this.key); // choose another random key as the shared encryption key
     }
 
     // Decrypts and authenticates the contents of <in>. <in> should have been
@@ -47,7 +47,7 @@ public class AuthDecryptor {
         // IMPLEMENT THIS
         if (in.length < NONCE_SIZE_BYTES + MAC_SIZE_BYTES)
             return null;
-        byte[] nonce = new byte[NONCE_SIZE_BYTES];
+        byte[] nonce = new byte[NONCE_SIZE_BYTES]; // extract the nonce from the array
         System.arraycopy(in, in.length - NONCE_SIZE_BYTES, nonce, 0, nonce.length);
         return authDecrypt(in, in.length - MAC_SIZE_BYTES - NONCE_SIZE_BYTES, nonce);
     }
@@ -76,14 +76,14 @@ public class AuthDecryptor {
         byte[] decrypted = new byte[decryptedLength];
 
         macPrf.update(nonce);
-        byte[] macDec = macPrf.eval(in, 0, decrypted.length);
+        byte[] macDec = macPrf.eval(in, 0, decrypted.length); // recover the MAC
 
         for (int i = 0; i < macDec.length; i++) {
             if (macDec[i] != in[decrypted.length + i])
-                return null;
+                return null; // return null if calculated MAC does not match given MAC
         }
 
-        new StreamCipher(decPrf.eval(nonce), nonce).cryptBytes(in, 0, decrypted, 0, decrypted.length);
+        new StreamCipher(key, nonce).cryptBytes(in, 0, decrypted, 0, decrypted.length);
         return decrypted;
     }
 

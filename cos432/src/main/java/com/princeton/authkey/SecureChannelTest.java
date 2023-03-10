@@ -170,6 +170,12 @@ public class SecureChannelTest implements Runnable {
                 false, rsakp.getPublicKey());
         SecureChannelTest sct = new SecureChannelTest(in2, out1,
                 true, rsakp.getPrivateKey());
+
+        // PRGen prgs = new PRGen(new byte[PRGen.KEY_SIZE_BYTES]);
+        // PRGen prgc = new PRGen(new byte[PRGen.KEY_SIZE_BYTES]);
+        // SecureChannel serverChan = new SecureChannel(cct.inStream, cct.outStream, prgs, false, rsakp.getPublicKey());
+        // SecureChannel clientchan = new SecureChannel(sct.inStream, sct.outStream, prgc, false, rsakp.getPrivateKey());
+
         Thread clntThread = new Thread(cct);
         Thread servThread = new Thread(sct);
         servThread.setDaemon(true);
@@ -184,6 +190,6 @@ public class SecureChannelTest implements Runnable {
             x.printStackTrace(System.err);
         }
 
-        System.out.printf("Total messages sent: %d, Total messages received: %d\n", messagesSent, messagesReceived);
+        // System.out.printf("Total messages sent: %d, Total messages received: %d\n", messagesSent, messagesReceived);
     }
 }

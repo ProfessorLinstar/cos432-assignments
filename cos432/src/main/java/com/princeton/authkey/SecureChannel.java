@@ -7,6 +7,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import java.io.*;
+
 public class SecureChannel extends InsecureChannel {
     // This is just like an InsecureChannel, except that it provides
     // authenticated encryption for the messages that pass
@@ -22,21 +24,10 @@ public class SecureChannel extends InsecureChannel {
 
     private AuthEncryptor enc;
     private AuthDecryptor dec;
-    private PRGen nonceInPrg;
-    private PRGen nonceOutPrg;
+    private PRGen nonceInPrg; // generates nonces for in-channel
+    private PRGen nonceOutPrg; // generates nonces for out-channel
     private byte[] nonceIn = new byte[AuthEncryptor.NONCE_SIZE_BYTES];
     private byte[] nonceOut = new byte[AuthEncryptor.NONCE_SIZE_BYTES];
-
-    // closes channel and clears instance variables
-    public void close() throws IOException {
-        super.close();
-        enc = null;
-        dec = null;
-        nonceInPrg = null;
-        nonceOutPrg = null;
-        nonceIn = null;
-        nonceOut = null;
-    }
 
     public SecureChannel(InputStream inStr, OutputStream outStr,
             PRGen rand, boolean iAmServer,
@@ -111,7 +102,7 @@ public class SecureChannel extends InsecureChannel {
         // IMPLEMENT THIS
         byte[] encrypted = enc.authEncrypt(message, nonceOut, true);
         super.sendMessage(encrypted);
-        nonceOutPrg.nextBytes(nonceOut);
+        nonceOutPrg.nextBytes(nonceOut); // move on to the next nonce
     }
 
     public byte[] receiveMessage() throws IOException {
