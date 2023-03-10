@@ -107,10 +107,14 @@ public class SecureChannel extends InsecureChannel {
 
     public byte[] receiveMessage() throws IOException {
         // IMPLEMENT THIS
-        byte[] inMessage = decrypt(super.receiveMessage()); // check that nonce is correct and decrypt
+        byte[] received = super.receiveMessage();
+        if (received == null)
+            return null;
 
+        byte[] inMessage = decrypt(received); // check that nonce is correct and decrypt
         if (inMessage != null) // if no problems detected in processing inMessage, move on to the next nonce
             nonceInPrg.nextBytes(nonceIn);
+
         return inMessage;
     }
 

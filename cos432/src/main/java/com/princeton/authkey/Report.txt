@@ -26,11 +26,11 @@ against such attacks.
 The adversary may attempt to compromise the confidentiality of a message by
 simply reading any messages sent throughout the network. We defend against this
 by using authenticated Diffie-Hellman key exchange to bootstrap a shared key,
-and then encrypted all communications using this key. MITM attacks can also
-compromise confidentiality; we cover this in the authenticity section. It is
-also possible for an adversary to learn information about a group of messages
-if the same encryption key is reused multiple times, so to prevent this we use
-a random nonce each time we use the shared key to generate an encryption key.
+and then encrypt all communications using this key. It is possible for an
+adversary to learn information about a group of messages if the same encryption
+key is reused multiple times, so to prevent this we use a random nonce each
+time we use the shared key to generate an encryption key. MITM attacks can also
+compromise confidentiality; we cover this in the authenticity section. 
 
  2. Integrity
 The contents of a message can be corrupted by an adversary, even without them
